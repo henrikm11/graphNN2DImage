@@ -5,10 +5,8 @@ Graph neural network for handwritten image classification, implemented from scra
 
 The architecture we use is that of a graph neural network.
 There is one neuron for each pixel (after possible initial pooling), edges correspond to $8$-directionally neighboring pixels.
-For a pixel $p$ we write $z_p^k$ for the input to the node corresponding to that pixel at depth $k$ and '
-$$
-h_p^k = \sigma(z_p^k),
-$$
+For a pixel $p$ we write $z_p^k$ for the input to the node corresponding to that pixel at depth $k$ and
+$$h_p^k = \sigma(z_p^k),$$
 where 
 $$\sigma \colon \mathbb{R} \to \mathbb{R}
 $$ 
