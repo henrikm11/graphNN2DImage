@@ -47,4 +47,4 @@ $$
 \delta_p^k = \sigma'(z_p^k)  \sum_{q \in \mathcal{N}_p} \delta_q^{k+1} b_q^k \frac{\partial \mathrm{smax}}{\partial \mathrm{idx}(p)}
 + \sigma'(z_p^k) \delta_p^{k+1} a_p^k,
 $$
-where $\mathrm{idx}(p)$ indicates that we differentiate $\smax$ in the coordinate in which $h_p^k$ is used.
+where $\mathrm{idx}(p)$ indicates that we differentiate $\mathrm{smax}$ in the coordinate in which $h_p^k$ is used.
