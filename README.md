@@ -5,7 +5,7 @@ Graph neural network for handwritten image classification, implemented from scra
 
 The architecture we use is that of a graph neural network.
 There is one neuron for each pixel (after possible initial pooling), edges correspond to $8$-directionally neighboring pixels.
-For a pixel $p$ we write $z_p^k$ for the input to the node corresponding to that pixel at depth $k$ and $h_p^k = \sigma(z_p^k)$, where $\sigma \colon \mathbb{R} \to \matbhbb{R}$ is our chosen activation function. 
+For a pixel $p$ we write $z_p^k$ for the input to the node corresponding to that pixel at depth $k$ and $h_p^k = \sigma(z_p^k)$, where $\sigma \colon \mathbb{R} \to \mathbb{R}$ is our chosen activation function. 
 For weight vectors $a,b,c$ to be learned we define for all but the output layer
 $$
 z_p^k =  a_p^{k-1} h_p^{k-1} + b_p^{k-1} N_p^{k-1} + c_p^{k-1}.
@@ -14,7 +14,7 @@ Here
 $$
 N_p^{k-1} = \smax_{q \in \mathcal{N}_p} h_q^{k-1},
 $$
-with $\mathcal{N}_p$ the neighboring nodes of $p$ and $\smax$ a smooth approximation of the maximum function.
+with $\mathcal{N}_p$ the neighboring nodes of $p$ and $\operatorname{smax}$ a smooth approximation of the maximum function.
 
 Write $K$ for the number of possible outputs.
 Then the output layer has $K$ neurons whose inputs $z_i^o$ are given by
