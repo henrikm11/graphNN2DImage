@@ -1,7 +1,6 @@
-#graphNN2DImage
 Graph neural network for handwritten image classification, implemented from scratch in C++.
 
-#Basic architecture#
+# Basic architecture
 
 The architecture we use is that of a graph neural network.
 There is one neuron for each pixel (after possible initial pooling), edges correspond to $8$-directionally neighboring pixels.
@@ -22,7 +21,7 @@ $$z_i^o = \sum_p w_{pi} h_p^k,$$
 where the sum ios over all pixels.
 The output is then given by taking activation function followed by softmax of these.
 
-##Bckpropagation formula##
+## Bckpropagation formula
 Write $\mathcal{L}$ for a fixed loss function and 
 $$\delta_p^k = \frac{\partial \mathcal{L}}{\partial z_p^k}.$$
 It is easy derives the following backpropagation formulas:
