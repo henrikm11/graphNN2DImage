@@ -27,5 +27,5 @@ $$\delta_p^k = \frac{\partial \mathcal{L}}{\partial z_p^k}.$$
 It is easy derives the following backpropagation formulas:
 $$\frac{\partial \mathcal{L}}{\partial a_p^{k-1}} = \delta_p^k h_p^{k-1}, \ \frac{\partial \mathcal{L}}{\partial b_p^{k-1}} = \delta_p^k N_p^{k-1}, \ \frac{\partial \mathcal{L}}{\partial c_p^{k-1}} = \delta_p^k,$$
 and
-$$\delta_p^k = \sigma'(z_p^k)  \sum_{q \in \mathcal{N}_p} \delta_q^{k+1} b_q^k \frac{\partial \mathrm{smax}}{\partial \mathrm{idx}(p)}+ \sigma'(z_p^k) \delta_p^{k+1} a_p^k,$$
+$$\delta_p^k = \sigma'(z_p^k)  \sum_{q \in \mathcal{N}_p} \delta_q^{k+1} b_q^k \partial_{mathrm{idx}(p)} \mathrm{smax}+ \sigma'(z_p^k) \delta_p^{k+1} a_p^k,$$
 where $\mathrm{idx}(p)$ indicates that we differentiate $\mathrm{smax}$ in the coordinate in which $h_p^k$ is used.
