@@ -4,28 +4,49 @@
 #include "graphNeural.h"
 #include "helper_fcts.h"
 
-
-void GraphNN2DImage::neuronGradient(
-    const tensor_3d& currState,
+void GraphNN2DImage::updateState(
     const tensor_2d& sample,
-    const int sampleOutput,
-    tensor_3d& neuronGradient //shape is (depth_+1),vertSize_,horSize_
+    tensor_3d& currState,
+    tensor_1d& outputLayerState
 )
 {
-
-
-    double alpha=10;
-
-
-
-    tensor_1d outputLayerState(outputClassesCount_,0);
+    //update graphical layers
+    currState[0]=sample;
+    for(size_t d=1; d<currState.size(); d++){
+        for(size_t i=0; i<vertSize_; i++){
+            for(size_t j=0; j<horSize_; j++){
+                currState[d][i][j]=
+                    weights_a_[d-1][i][j]*currState[d-1][i][j]
+                    +weights_b_[d-1][i][j]*neighborContribution(i,j,currState[d-1])
+                    +weights_c_[d-1][i][j]
+                ;
+            }
+        }
+    }
+    
+    //update outputLayer
     for(size_t l = 0; l<outputClassesCount_; l++){
+        outputLayerState[l]=weights_output_bias_[l];
         for(size_t i = 0; i<vertSize_; i++){
             for(size_t j=0; j<horSize_; j++){
                 outputLayerState[l]+=weights_output_[i][j][l]*sigma(currState[depth_][i][j]);
             }
         }
     }
+
+}
+
+
+void GraphNN2DImage::neuronGradient(
+    const tensor_3d& currState, //used to store value of input to neurons at sample
+    const tensor_1d& outputLayerState, //used to store value in output layer before taking softmax
+    const tensor_2d& sample,
+    const int sampleOutput,
+    tensor_3d& neuronGradient //shape is (depth_+1),vertSize_,horSize_, layer 0 is input layer
+)
+{
+
+    
    
 
     for(size_t i = 0; i<vertSize_; i++){
@@ -57,7 +78,7 @@ void GraphNN2DImage::neuronGradient(
                     for(const auto nb_nb : nb_nbhd){
                         activatedNbs.push_back(sigma(currState[k][nb_nb.first][nb_nb.second]));
                     }
-                    std::vector<double> softMaxGrad = BoltzmannOperatorGrad(activatedNbs , alpha);
+                    std::vector<double> softMaxGrad = BoltzmannOperatorGrad(activatedNbs , alpha_);
                     neuronGradient[k][i][j]+=
                         neuronGradient[k+1][nb.first][nb.second]
                         *weights_b_[k][nb.first][nb.second]
