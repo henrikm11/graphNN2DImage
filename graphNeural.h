@@ -46,15 +46,17 @@ private:
     /// @param sampleOutputs outputs for those samples in same order
     /// @param neuronGradient gradient in direction of input to neurons (i.e before activation is used),neuronGradient[k][i][j] is derivative at depth k and pixel [i,j]
     void neuronGradient(
-        const tensor_3d& currState,
         const tensor_2d& sample,
         const int sampleOutput,
-        tensor_3d& neuronGradient
+        tensor_3d& neuronGradient,
+        tensor_3d& currState,
+        tensor_1d& outputLayerState
     );
 
     void updateState(
-        tensor3d& currState,
-        tensor1d& outputLayerState
+        const tensor_2d& sample,
+        tensor_3d& currState,
+        tensor_1d& outputLayerState
     );
 
     double neighborContribution(const int vertPos, const int horPos, const tensor_2d& state);

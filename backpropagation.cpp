@@ -4,45 +4,14 @@
 #include "graphNeural.h"
 #include "helper_fcts.h"
 
-void GraphNN2DImage::updateState(
-    const tensor_2d& sample,
-    tensor_3d& currState,
-    tensor_1d& outputLayerState
-)
-{
-    //update graphical layers
-    currState[0]=sample;
-    for(size_t d=1; d<currState.size(); d++){
-        for(size_t i=0; i<vertSize_; i++){
-            for(size_t j=0; j<horSize_; j++){
-                currState[d][i][j]=
-                    weights_a_[d-1][i][j]*currState[d-1][i][j]
-                    +weights_b_[d-1][i][j]*neighborContribution(i,j,currState[d-1])
-                    +weights_c_[d-1][i][j]
-                ;
-            }
-        }
-    }
-    
-    //update outputLayer
-    for(size_t l = 0; l<outputClassesCount_; l++){
-        outputLayerState[l]=weights_output_bias_[l];
-        for(size_t i = 0; i<vertSize_; i++){
-            for(size_t j=0; j<horSize_; j++){
-                outputLayerState[l]+=weights_output_[i][j][l]*sigma(currState[depth_][i][j]);
-            }
-        }
-    }
-
-}
 
 
 void GraphNN2DImage::neuronGradient(
-    const tensor_3d& currState, //used to store value of input to neurons at sample
-    const tensor_1d& outputLayerState, //used to store value in output layer before taking softmax
     const tensor_2d& sample,
     const int sampleOutput,
-    tensor_3d& neuronGradient //shape is (depth_+1),vertSize_,horSize_, layer 0 is input layer
+    tensor_3d& neuronGradient, //shape is (depth_+1),vertSize_,horSize_, layer 0 is input layer
+     tensor_3d& currState, //used to store value of input to neurons at sample
+    tensor_1d& outputLayerState //used to store value in output layer before taking softmax
 )
 {
 
