@@ -15,12 +15,20 @@ typedef std::vector<std::vector<std::vector<double>>> tensor_3d;
 class GraphNN2DImage{
 public:
 
-    GraphNN2DImage(int depth, double learningRate, int outputClassesCount, int horSize, int vertSize)
-        :depth_(depth),
-        learningRate_(learningRate),
+    GraphNN2DImage(
+        unsigned int horSize, 
+        unsigned int vertSize,
+        unsigned int outputClassesCount, 
+        unsigned int depth,
+        double alpha=10,
+        double learningRate=0.1
+        )
+        :horSize_(horSize),
+        vertSize_(vertSize),
         outputClassesCount_(outputClassesCount),
-        horSize_(horSize),
-        vertSize_(vertSize)
+        depth_(depth),
+        alpha_(alpha),
+        learningRate_(learningRate)  
     {};
 
     void fit();
@@ -47,11 +55,14 @@ private:
     double neighborContribution(const int vertPos, const int horPos, const tensor_2d& state);
 
 
-
+    //data dependent parameters
     const unsigned int horSize_;
     const unsigned int vertSize_;
     const unsigned int outputClassesCount_;
-    const unsigned int depth_; //number of graphical layers
+
+    //model parameters
+    const unsigned int depth_; 
+    const double alpha_;    //regularization parameter for approximation of max, argmax
     const double learningRate_;
 
     tensor_3d weights_a_; //weights connecting pixel to itself from layer to next
