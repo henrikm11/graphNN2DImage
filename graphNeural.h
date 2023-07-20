@@ -52,6 +52,11 @@ private:
         tensor_3d& neuronGradient
     );
 
+    void updateState(
+        tensor3d& currState,
+        tensor1d& outputLayerState
+    );
+
     double neighborContribution(const int vertPos, const int horPos, const tensor_2d& state);
 
 
