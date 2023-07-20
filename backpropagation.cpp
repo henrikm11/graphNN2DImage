@@ -12,8 +12,7 @@ void GraphNN2DImage::neuronGradient(
     tensor_3d& neuronGradient //shape is (depth_+1),vertSize_,horSize_
 )
 {
-    //const int d = neuronGradient.size(); //total depth of network
-    //const int outputClassCount = weights_output[0].size(); //number of possible outputs
+
 
     double alpha=10;
 
@@ -72,9 +71,6 @@ void GraphNN2DImage::neuronGradient(
     return;
 }
 
-
-
-//below needs slight update in tensor structure to be coherent with above choice
 
 
 
