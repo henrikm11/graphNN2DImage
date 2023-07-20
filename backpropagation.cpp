@@ -10,28 +10,24 @@ void GraphNN2DImage::neuronGradient(
     const tensor_2d& sample,
     const int sampleOutput,
     tensor_3d& neuronGradient, //shape is (depth_+1),vertSize_,horSize_, layer 0 is input layer
-     tensor_3d& currState, //used to store value of input to neurons at sample
+    tensor_3d& currState, //used to store value of input to neurons at sample
     tensor_1d& outputLayerState //used to store value in output layer before taking softmax
 )
 {
-
-    
-   
-
+    //output layer explicitly
     for(size_t i = 0; i<vertSize_; i++){
         for(size_t j=0; j<horSize_; j++){
             tensor_1d grad = softArgMaxGradComponent(outputLayerState, sampleOutput);
             double inv = 0;
             for(size_t l=0; l<outputClassesCount_; l++){
-                double cont = grad[l]*weights_output_[i][j][l]*sigmaPrime(currState[depth_][i][j]);
-                inv+=cont;
+                inv += grad[l]*weights_output_[i][j][l]*sigmaPrime(currState[depth_][i][j]);
             }
             neuronGradient[depth_][i][j]=-1/inv;
         }
     }
 
-    //compute remaining layers
-    for(int k=depth_-1; k>-1; k--){
+    //remaining layers, 0th layer is input layer
+    for(int k=depth_-1; k>0; k--){
         //compute neuronGadient at depth k
         for(int i=0; i<vertSize_; i++){
             for(int j=0; j<horSize_; j++){
@@ -47,7 +43,7 @@ void GraphNN2DImage::neuronGradient(
                     for(const auto nb_nb : nb_nbhd){
                         activatedNbs.push_back(sigma(currState[k][nb_nb.first][nb_nb.second]));
                     }
-                    std::vector<double> softMaxGrad = BoltzmannOperatorGrad(activatedNbs , alpha_);
+                    std::vector<double> softMaxGrad = BoltzmannOperatorGrad(activatedNbs , alpha_); //only need one component, can be optimized a bit
                     neuronGradient[k][i][j]+=
                         neuronGradient[k+1][nb.first][nb.second]
                         *weights_b_[k][nb.first][nb.second]
@@ -56,7 +52,6 @@ void GraphNN2DImage::neuronGradient(
                 }
             }
         }
-    
     }
     return;
 }
