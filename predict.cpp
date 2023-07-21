@@ -9,7 +9,8 @@ double GraphNN2DImage::neighborContribution(const int vertPos, const int horPos,
     std::vector<std::pair<int,int>> neighbors = getNeighbors(vertSize_, horSize_, vertPos, horPos);
     std::vector<double> neighborStates;
     for(const auto nb : neighbors){
-        neighborStates.push_back(state[nb.first][nb.second]);
+        //this should need a sigma, check again
+        neighborStates.push_back(sigma(state[nb.first][nb.second]));
     }
     return BoltzmannOperator(neighborStates);
 }
@@ -35,7 +36,7 @@ void GraphNN2DImage::updateState(
         }
     }
     
-    //update outputLayer
+    //update outputLayer (before taking softmax on it)
     for(size_t l = 0; l<outputClassesCount_; l++){
         outputLayerState[l]=weights_output_bias_[l];
         for(size_t i = 0; i<vertSize_; i++){
