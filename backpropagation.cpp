@@ -6,12 +6,13 @@
 
 
 
+
 void GraphNN2DImage::neuronGradient(
     const tensor_2d& sample,
     const int sampleOutput,
-    tensor_3d& neuronGradient, //shape is (depth_+1),vertSize_,horSize_, layer 0 is input layer
-    tensor_3d& currState, //used to store value of input to neurons at sample
-    tensor_1d& outputLayerState //used to store value in output layer before taking softmax
+    tensor_3d& neuronGrad, //shape is (depth_+1),vertSize_,horSize_, layer 0 is input layer
+    const tensor_3d& currState, //used to store value of input to neurons at sample
+    const tensor_1d& outputLayerState //used to store value in output layer before taking softmax
 )
 {
     //output layer explicitly
@@ -22,7 +23,7 @@ void GraphNN2DImage::neuronGradient(
             for(size_t l=0; l<outputClassesCount_; l++){
                 inv += grad[l]*weights_output_[i][j][l]*sigmaPrime(currState[depth_][i][j]);
             }
-            neuronGradient[depth_][i][j]=-1/inv;
+            neuronGrad[depth_][i][j]=-1/inv;
         }
     }
 
@@ -33,7 +34,7 @@ void GraphNN2DImage::neuronGradient(
             for(int j=0; j<horSize_; j++){
                 //compute neuronGradient[k][i][j]
                 std::vector<std::pair<int,int>> nbhd = getNeighbors(vertSize_, horSize_, i, j);
-                neuronGradient[k][i][j]=neuronGradient[k+1][i][j]*weights_a_[k][i][j]*sigmaPrime(currState[k][i][j]); //contribution from same pixel
+                neuronGrad[k][i][j]=neuronGrad[k+1][i][j]*weights_a_[k][i][j]*sigmaPrime(currState[k][i][j]); //contribution from same pixel
                 for(const std::pair<int,int> nb : nbhd){
                     //contribution through neighbors
                     std::vector<std::pair<int,int>> nb_nbhd =  getNeighbors(vertSize_, horSize_, nb.first, nb.second);
@@ -44,8 +45,8 @@ void GraphNN2DImage::neuronGradient(
                         activatedNbs.push_back(sigma(currState[k][nb_nb.first][nb_nb.second]));
                     }
                     std::vector<double> softMaxGrad = BoltzmannOperatorGrad(activatedNbs , alpha_); //only need one component, can be optimized a bit
-                    neuronGradient[k][i][j]+=
-                        neuronGradient[k+1][nb.first][nb.second]
+                    neuronGrad[k][i][j]+=
+                        neuronGrad[k+1][nb.first][nb.second]
                         *weights_b_[k][nb.first][nb.second]
                         *sigmaPrime(currState[k][i][j])
                         *softMaxGrad[idx];
@@ -57,48 +58,38 @@ void GraphNN2DImage::neuronGradient(
 }
 
 
+void GraphNN2DImage::weightsGradient(
+    const tensor_2d& sample,
+    const int sampleOutput,
+    tensor_3d& weights_a_grad,
+    tensor_3d& weights_b_grad,
+    tensor_3d& weights_c_grad,
+    tensor_3d& weights_output_grad,
+    tensor_1d& weights_output_bias_grad,
+    tensor_3d& neuronGrad,
+    tensor_3d& currState, //used to store value of input to neurons at sample
+    tensor_1d& outputLayerState //used to store value in output layer before taking softmax
 
-
-/// @brief computes gradient of weights at currDepth at samples
-/// @param weights (inhomogeneous) tensor of weights
-/// @param samples samples used for computation
-/// @param weightsGradients stored gradients of weights, up to date at sample at depths>currDepth
-/// @param currDepth current depth
-void weightsLayerGradient(
-    const std::vector<std::vector<double>>& weights,
-    const std::vector<std::vector<std::vector<double>>>& samples,
-    std::vector<std::vector<std::vector<double>>>& weightsGradients,
-    int currDepth
 ){
-    int depth=weightsGradients.size();
-    if(currDepth==depth){
-        //
+    updateState(sample,  currState, outputLayerState); 
+    neuronGradient(sample, sampleOutput, neuronGrad, currState, outputLayerState); 
+
+    for(size_t d=0; d<depth_; d++){
+        for(size_t i=0; i<vertSize_; i++){
+            for(size_t j=0; j<horSize_; j++){
+                weights_a_grad[d][i][j]=neuronGrad[d+1][i][j]*sigma(currState[d][i][j]);
+                weights_b_grad[d][i][j]=neuronGrad[d+1][i][j]*neighborContribution(i,j,currState[d]); //neighborCont has sigma inbuilt
+                weights_c_grad[d][i][j]=neuronGrad[d+1][i][j];
+            }
+        }
     }
 
-    //finish, easy based on neuron Gradient above
-
-
-    return;
-
-}
-
-
-/// @brief computes gradient of weights at given samples
-/// @param weights (inhomogeneous) tensor of weights
-/// @param samples samples used for computation
-/// @param weightsGradients stored gradients of weights updated for current position
-void weightsGradient(
-    const std::vector<std::vector<double>>& weights,
-    const std::vector<std::vector<std::vector<double>>>& samples,
-    std::vector<std::vector<std::vector<double>>>& weightsGradients
-    ){
-    int depth = weightsGradients.size()-1;
-    for(int i=depth; i>-1; i--){
-        weightsLayerGradient(weights, samples, weightsGradients, i);
+    tensor_1d grad = softArgMaxGradComponent(outputLayerState, sampleOutput);
+    for(size_t i=0; i<vertSize_; i++){
+        for(size_t j=0; j<horSize_; j++){
+            weights_output_grad[sampleOutput][i][j]=-1/(grad[sampleOutput]*sigma(currState[depth_][i][j]));
+        }
     }
+    weights_output_bias_grad[sampleOutput]=-1/grad[sampleOutput];
     return;
 }
-
-
-
-
