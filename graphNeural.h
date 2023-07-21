@@ -48,10 +48,25 @@ private:
     void neuronGradient(
         const tensor_2d& sample,
         const int sampleOutput,
-        tensor_3d& neuronGradient,
-        tensor_3d& currState,
-        tensor_1d& outputLayerState
+        tensor_3d& neuronGrad,
+        const tensor_3d& currState,
+        const tensor_1d& outputLayerState
     );
+
+
+    void weightsGradient(
+        const tensor_2d& sample,
+        const int sampleOutput,
+        tensor_3d& weights_a_grad,
+        tensor_3d& weights_b_grad,
+        tensor_3d& weights_c_grad,
+        tensor_3d& weights_output_grad,
+        tensor_1d& weights_output_bias_grad,
+        tensor_3d& neuronGrad,
+        tensor_3d& currState, //used to store value of input to neurons at sample
+        tensor_1d& outputLayerState //used to store value in output layer before taking softmax
+    );
+
 
     void updateState(
         const tensor_2d& sample,
