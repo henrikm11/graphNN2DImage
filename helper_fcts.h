@@ -1,8 +1,8 @@
 //helper_fcts.h
 
 
-#ifndef HELPER_FCTS.H
-#define HELPER_FCTS.H
+#ifndef HELPER_FCTS_H
+#define HELPER_FCTS_H
 
 #include "graphNeural.h"
 #include <vector>
@@ -28,6 +28,7 @@ inline double crossEntropy(std::vector<double> probabilities, int correctLabel){
 inline std::vector<double> crossEntropyGradient(std::vector<double> probabilities, int correctLabel){
     std::vector<double> grad(probabilities.size(),0);
     grad[correctLabel]=-1/probabilities[correctLabel];
+    return grad;
 }
 
 inline double sigma(const double input){
@@ -125,4 +126,4 @@ inline std::vector<double> BoltzmannOperatorGrad(const std::vector<double>& inpu
     return gradient;
 }
 
-#endif //HELPER_FCTS.H
+#endif //HELPER_FCTS_H
