@@ -1,5 +1,16 @@
 //tensor_template.h
 
+/*
+template for 'inhomogeneous tensors'
+a tensor of type <T,N> is given by a fixed(!) size std::vector of tensors of type <T,N-1>
+a 1 tensor is nothing but a fixed(!) size std::vector<T>
+
+natural framework for neural networks with varying number of neurons across layers
+should not be used for N large because of potential memory fragmentation
+fixed size does in principal allow to use a continuous block of memory, but allowing different sizes for different components makes the index arithmetics of this extremely complicated
+benefit of using iterated vectors is that Tensor<T,N>::operator[] returns Tensor<T,N-1>& and not an artificial reference type object.
+*/
+
 #include <vector>
 
 #ifndef TENSOR_TEMPLATE_H
