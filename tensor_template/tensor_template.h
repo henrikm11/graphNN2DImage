@@ -54,10 +54,10 @@ class Tensor{
 public:
     Tensor(const std::vector<Tensor<T,N-1>>& entries);
     //copy and destructor are default
-    //assignment deleted because of const member variable
-    Tensor<T,N>& operator=(const Tensor<T,N>& other);
+    ///assignment needs minimal attention because of const member variable
     //assignment throws if shapes don't match, otherwise default
-
+    Tensor<T,N>& operator=(const Tensor<T,N>& other);
+    
 
     size_t size(void) const;
     Tensor<T,N-1>& operator[](const int i);
@@ -77,9 +77,11 @@ public:
     Tensor(const std::vector<T>& entries);
     Tensor(int shape);
     Tensor(TensorShape<1> shape);
-    Tensor<T,1>& operator=(const Tensor<T,1>& other);
     //copy and destructor are default
-    //assignment deleted because of const member variable
+    //assignment needs minimal attention because of const member variable
+    //assignment throws if shapes don't match, otherwise default
+    Tensor<T,1>& operator=(const Tensor<T,1>& other);
+    
     size_t size(void) const;
     T& operator[](const int i);
     const T& at(const int i) const;
