@@ -53,6 +53,7 @@ template<typename T, size_t N>
 class Tensor{
 public:
     Tensor(const std::vector<Tensor<T,N-1>>& entries);
+    Tensor(const TensorShape<N>& shape);
     //copy and destructor are default
     ///assignment needs minimal attention because of const member variable
     //assignment throws if shapes don't match, otherwise default
