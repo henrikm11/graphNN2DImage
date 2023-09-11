@@ -104,6 +104,17 @@ Tensor<T,N>::Tensor(const std::vector<Tensor<T,N-1>>& entries)
     :entries_(entries),shape_(getShape<T,N>(entries))
     {}
 
+template<typename T, size_t N>
+Tensor<T,N>::Tensor(const TensorShape<N>& shape)
+    :shape_(shape)
+    {
+        //entries default initialized to length 0, now fill it
+        for(size_t i=0; i<shape.size(); i++){
+            Tensor<T,N-1> entry(shape[i]);
+            entries_.push_back(entry);
+        }
+    }
+
 
 //copy assignment
 template<typename T, size_t N>
@@ -177,7 +188,7 @@ Tensor<T,1>::Tensor(int shape)
 
 template<typename T>
 Tensor<T,1>::Tensor(TensorShape<1> shape)
-    :entries_(shape),shape_(shape)
+    :entries_(shape.size()),shape_(shape)
     {}
 
 template<typename T>
