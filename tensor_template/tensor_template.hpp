@@ -4,6 +4,12 @@
 contains implementation of tensor template
 */
 
+
+/*
+// TODO
+// -) implement slice operator of type Tensor<T,M>& getSlice(const vector<size_t>&)?
+*/
+
 #include <vector>
 #include <stdexcept>
 
@@ -19,26 +25,107 @@ contains implementation of tensor template
 
 template<size_t N>
 TensorShape<N>::TensorShape(const std::vector<TensorShape<N-1>>& shape)
-    :shape_(shape)
+    :shape(shape)
     {}
 
 template<size_t N>
+TensorShape<N>::TensorShape(size_t n, const TensorShape<N-1>& slice)
+    :shape(n, slice)
+    {}
+
+
+template<size_t N>
 const TensorShape<N-1>& TensorShape<N>::operator[](const int i) const {
-    if(i<0 || i>shape_.size()-1){throw std::out_of_range("TensorShape<N>::operator[]");}
-    return shape_[i];
+    if(i<0 || i>shape.size()-1){throw std::out_of_range("TensorShape<N>::operator[]");}
+    return shape[i];
 }
 
 template<size_t N>
 size_t TensorShape<N>::size(void) const
     {
-        return shape_.size();
+        return shape.size();
     }
+
+template<size_t N>
+size_t TensorShape<N>::entryCount() const {
+    size_t count=0;
+    for(size_t i=0; i<shape.size(); i++){
+        count+=shape[i].entryCount();
+    }
+    return count;
+}
+	
+
+template<size_t N>
+std::vector<std::vector<size_t>> TensorShape<N>::generateCoordinates() const{
+    std::vector<std::vector<size_t>> coordinates;
+    for(size_t i=0; i<shape.size();i++){
+        std::vector<std::vector<size_t>> tails = shape[i].generateCoordinates();
+        for(auto& tail : tails){
+            std::vector<size_t> coord = {i};
+            coord.insert(coord.end(),tail.begin(),tail.end());
+            coordinates.push_back(coord);
+        }
+    }
+    return coordinates;
+}
+
+template<size_t N>
+std::vector<std::vector<std::vector<size_t>>> TensorShape<N>::generateSlicedCoordinates() const{
+std::vector<std::vector<std::vector<size_t>>> coordinates;
+    for(size_t i=0; i<shape.size();i++){
+        std::vector<std::vector<size_t>> coordinatesSlice;
+        std::vector<std::vector<size_t>> tails = shape[i].generateCoordinates();
+        for(auto& tail : tails){
+            std::vector<size_t> coord;// = {i};
+            coord.insert(coord.end(),tail.begin(),tail.end());
+            coordinatesSlice.push_back(coord);
+        }
+        coordinates.push_back(coordinatesSlice);
+    }
+    return coordinates;  
+}
+
+
+
+
 
 
 /*
 //
 //TENSORSHAPE<N>
 //END OF IMPLEMENTATION
+//
+*/
+
+
+/*
+//
+//CONCATESHAPES FUNCTIONS
+//
+*/
+
+template<size_t M, size_t N>
+inline TensorShape<M+N> concatShapes(const TensorShape<M>& first, const TensorShape<N>& second){
+    std::vector<TensorShape<M+N-1>> concatEntries;
+    for(size_t i=0; i<first.size();i++){
+        concatEntries.emplace_back(concatShapes(first[i],second));
+    }
+    TensorShape<M+N> concatShape(concatEntries);
+    return concatShape;
+}
+
+
+template<size_t N>
+inline TensorShape<N+1> concatShapes(const TensorShape<1>& first, const TensorShape<N>& second){
+    std::vector<TensorShape<N>> concatEntries(first.size(),second);
+    TensorShape<N+1> concatShape(concatEntries);
+    return concatShape;
+}
+
+/*
+//
+//END OF CONCATESHAPES FUNCTIONS
 //
 */
 
@@ -60,7 +147,7 @@ inline bool operator==(const TensorShape<N>& lhs , const TensorShape<N>& rhs){
 }
 
 inline bool operator==(const TensorShape<1>& lhs, const TensorShape<1>& rhs){
-    return lhs.shape_==rhs.shape_;
+    return lhs.shape==rhs.shape;
 }
 
 template<size_t M, size_t N>
@@ -74,7 +161,7 @@ inline bool operator!=(const TensorShape<N>& lhs , const TensorShape<N>& rhs){
 }
 
 inline bool operator!=(const TensorShape<1>& lhs, const TensorShape<1>& rhs){
-    return !(lhs.shape_==rhs.shape_);
+    return !(lhs.shape==rhs.shape);
 }
 
 
@@ -101,12 +188,12 @@ inline bool operator!=(const TensorShape<M>& lhs, const TensorShape<N>& rhs){
 //constructor
 template<typename T, size_t N>
 Tensor<T,N>::Tensor(const std::vector<Tensor<T,N-1>>& entries)
-    :entries_(entries),shape_(getShape<T,N>(entries))
+    :entries_(entries),shape(getShape<T,N>(entries))
     {}
 
 template<typename T, size_t N>
 Tensor<T,N>::Tensor(const TensorShape<N>& shape)
-    :shape_(shape)
+    :shape(shape)
     {
         //entries default initialized to length 0, now fill it
         for(size_t i=0; i<shape.size(); i++){
@@ -119,7 +206,8 @@ Tensor<T,N>::Tensor(const TensorShape<N>& shape)
 //copy assignment
 template<typename T, size_t N>
 Tensor<T,N>& Tensor<T,N>::operator=(const Tensor<T,N>& other){
-    if(shape_!=other.shape_){throw std::invalid_argument("Tensor<T,N> operator=:shapes do not match");}
+    if(this==&other){return *this;}
+    if(shape!=other.shape){throw std::invalid_argument("Tensor<T,N> operator=:shapes do not match");}
     entries_=other.entries_;
     return *this;
 }
@@ -132,7 +220,8 @@ size_t Tensor<T,N>::size(void) const{
 
 
 
-//element access
+
+//slice access
 template<typename T, size_t N>
 Tensor<T,N-1>& Tensor<T,N>::operator[](const int i){
     if(i<0 || i>entries_.size()){
@@ -141,19 +230,34 @@ Tensor<T,N-1>& Tensor<T,N>::operator[](const int i){
     return entries_[i];
 }
 
-//const element access
+//const slice access
 template<typename T, size_t N>
 const Tensor<T,N-1>& Tensor<T,N>::at(const int i) const{
     if(i<0 || i>entries_.size()-1){throw std::out_of_range("Tensor<T,N>::at");}
     return entries_.at(i);
 }
 
+/*
 //shape access
 template<typename T, size_t N>
 const TensorShape<N>& Tensor<T,N>::shape(void) const{
-    return shape_;
+    return shape;
 }
+*/
 
+
+//element access
+///@brief returns reference to entry at coordinates[depth:]
+template<typename T, size_t N>
+T& Tensor<T,N>::getEntry(const std::vector<size_t>& coordinates, const size_t depth){
+    if(coordinates.size()-depth!=N){
+        throw(std::domain_error("Tensor<T,N>::getEntry: size of coordinates, depth, N do not mathc"));
+    }
+    if(coordinates[depth]>shape.size()){
+        throw(std::out_of_range("Tensor<T,N>::getEntry"));
+    }
+    return entries_[coordinates[depth]].getEntry(coordinates,depth+1);
+};
 
 
 /*
@@ -178,22 +282,24 @@ const TensorShape<N>& Tensor<T,N>::shape(void) const{
 //constructors
 template<typename T>
 Tensor<T,1>::Tensor(const std::vector<T>& entries)
-    :entries_(entries), shape_(entries.size())
+    :entries_(entries), shape(entries.size())
     {}
 
 template<typename T>
 Tensor<T,1>::Tensor(int shape)
-    :entries_(shape), shape_(shape)
+    :entries_(shape), shape(shape)
     {}
 
 template<typename T>
 Tensor<T,1>::Tensor(TensorShape<1> shape)
-    :entries_(shape.size()),shape_(shape)
+    :entries_(shape.size()),shape(shape)
     {}
 
+//copy assignment
 template<typename T>
 Tensor<T,1>& Tensor<T,1>::operator=(const Tensor<T,1>& other){
-    if(shape_!=other.shape_){throw std::invalid_argument("Tensor<T,1> operator=:shapes do not match");}
+    if(this==&other){return *this;}
+    if(shape!=other.shape){throw std::invalid_argument("Tensor<T,1> operator=:shapes do not match");}
     entries_=other.entries_;
     return *this;
 }
@@ -201,7 +307,7 @@ Tensor<T,1>& Tensor<T,1>::operator=(const Tensor<T,1>& other){
 //element access
 template<typename T>
 T& Tensor<T,1>::operator[](const int i){
-    if(i<0 || i>shape_.shape_-1){
+    if(i<0 || i>shape.shape-1){
         throw std::out_of_range("Tensor<T,1>::operator[]");
     }
     return entries_[i];
@@ -220,13 +326,26 @@ size_t Tensor<T,1>::size(void) const{
     return entries_.size();
 }
 
+/*
 template<typename T>
 const TensorShape<1>& Tensor<T,1>::shape(void){
-    return shape_;
+    return shape;
 }
+*/
 
 
-
+//element access
+///@brief returns reference to entry at coordinates[depth:]
+template<typename T>
+T& Tensor<T,1>::getEntry(const std::vector<size_t>& coordinates, const size_t depth){
+    if(coordinates.size()-depth!=1){
+        throw(std::domain_error("Tensor<T,N>::getEntry: size of coordinates, depth, N do not mathc"));
+    }
+        if(coordinates[depth]>shape.size()){
+        throw(std::out_of_range("Tensor<T,N>::getEntry"));
+    }
+    return entries_[coordinates[depth]];
+};
 
 
 /*
