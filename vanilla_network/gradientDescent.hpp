@@ -17,14 +17,14 @@ inline void gradientDescentStep(
     const Tensor<T,M>& weightsGradient,
     const double learningRate
     ){
-        if(weightsStates.shape==weightsGradient.shape){
+        if(weightsStates.shape!=weightsGradient.shape){
             throw(std::domain_error("gradientDescentShape: size of function and gradient do not match"));
         }
         for(size_t i=0; i<weightsStates.size(); i++){
             //call gradient Descent on each weight
             gradientDescentStep(
                 weightsStates[i],
-                weightsGradient[i],
+                weightsGradient.at(i),
                 learningRate
             );
         }
@@ -38,28 +38,29 @@ inline void gradientDescentStep(
     const Tensor<T,1>& weightsGradient,
     const double learningRate
     ){
-        if(weightsState.shape==weightsGradient.shape){
+        if(weightsState.shape!=weightsGradient.shape){
             throw(std::domain_error("gradientDescentShape: size of function and gradient do not match"));
         }
         for(size_t i=0; i<weightsState.size(); i++){
-            weightsState[i]+=(learningRate*weightsGradient[i]);
+            weightsState[i]-=(learningRate*weightsGradient.at(i)); //corrected sign
         }
+        
     return;
 }
 
 template<size_t N>
-void neuralNetwork<N>::gradientDescentStep(){
-    //weightss
+void neuralNetwork<N>::netGradientDescentStep(double learningRate){
+    //weights
     gradientDescentStep( 
         weights_, 
         weightsGrad_,
-        learningRate_
+        learningRate
     );
     //biases
     gradientDescentStep(
         biases_,
         biasesGrad_,
-        learningRate_
+        learningRate
     );
     return;
 }
