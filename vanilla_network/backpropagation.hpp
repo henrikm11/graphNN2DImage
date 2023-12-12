@@ -7,6 +7,7 @@
 #include <vector>
 #include "tensor_template/tensor_template.h"
 #include "neuralNetwork.h"
+#include <iostream>
 
 /*
 // TODO
@@ -32,6 +33,7 @@ void neuralNetwork<N>::updateLayer_(const size_t i){
             double weight = weights_.getEntry(weightCoord);
             updatedEntry+=(weight*activationFct_(neuronStates_[i-1].getEntry(prevCoord)));
         }
+        updatedEntry+=biases_[i].getEntry(currCoord);
         //updatedEntry=this->activationFct_(updatedEntry);
         //new version stores values of neurons before applying activation to it
         neuronStates_[i].getEntry(currCoord)=updatedEntry;
@@ -62,10 +64,11 @@ Tensor<double,N-1> neuralNetwork<N>::predict(
     if(updateNeuronStates){
         updateNeuronStates_(input);
     }
-    Tensor<double,N-1> pred(neuronStates_.shape.back());
+    Tensor<double,N-1> pred(neuronStates_.shape.shape.back());
     for(const auto& c : coordinates_.back()){
         pred.getEntry(c)=activationFct_(neuronStates_[neuronStates_.size()-1].getEntry(c));
     }
+    return pred;
 }
 
 
@@ -73,27 +76,18 @@ Tensor<double,N-1> neuralNetwork<N>::predict(
 
 
 //update Gradient of weights and biases given a sample
-//bool batch indicates is sample is part of a batch if so gradients are not overwritten but added to existing
+//batchIdx indicates position of sample in batch
 template<size_t N>
 void neuralNetwork<N>::updateGradient_(
     const Tensor<double, N-1>& sampleIn,
     const Tensor<double,N-1>& sampleOut,
-    size_t batchSize
+    size_t batchIdx
 ){
-    /*
-    call:
-    forward propagation
-    gradient updates for:
-    final layer
-    backpropagation
-    weights
-    biases
-    */
     updateNeuronStates_(sampleIn);
     updateOutputLayerGrad_(sampleIn, sampleOut);
-    backpropagation(sampleIn, sampleOut);
-    updateWeightsGrad_(batchSize);
-    updateBiasesGrad_(batchSize);
+    backpropagation_();
+    updateWeightsGrad_(batchIdx);
+    updateBiasesGrad_(batchIdx);
     return;
 }
 
@@ -116,15 +110,20 @@ void neuralNetwork<N>::updateOutputLayerGrad_(
 //compute gradient in neuron state variables for all hidden and input layers
 template<size_t N>
 void neuralNetwork<N>::backpropagation_()
-{
-    for(size_t layer = coordinates_.size()-2; layer>-1; layer--){
+{   
+   
+    for(size_t layer = coordinates_.size()-2; layer<coordinates_.size()-1; layer--){
         for(const auto& c : coordinates_[layer]){
+            neuronGrad_[layer].getEntry(c)=0;
             for(const auto& d : coordinates_[layer+1]){
                 std::vector<size_t> weightCoord = {layer};
                 weightCoord.insert(weightCoord.end(),c.begin(),c.end());
                 weightCoord.insert(weightCoord.end(),d.begin(),d.end());
                 neuronGrad_[layer].getEntry(c)+=
-                    neuronGrad_[layer+1].getEntry(d)*weights_.getEntry(weightCoord)*activationFctGrad_(neuronStates_[layer].getEntry(c));
+                    neuronGrad_[layer+1].getEntry(d)
+                    *weights_.getEntry(weightCoord)
+                    *activationFctGrad_(neuronStates_[layer].getEntry(c))
+                ;
             }
         }
     }
@@ -133,22 +132,26 @@ void neuralNetwork<N>::backpropagation_()
 
 //updates all weights assuming that neuronGrad_ has been updated
 template<size_t N>
-void neuralNetwork<N>::updateWeightsGrad_(size_t batchSize){
+void neuralNetwork<N>::updateWeightsGrad_(size_t batchIdx){
     for(size_t layer=0; layer<neuronStates_.size()-1; layer++){
         for(const auto& outCoord : coordinates_[layer]){
             //update weight going out of outCoord
             double updatedEntry=0;
             for(const auto& inCoord : coordinates_[layer+1]){
-                //update weight connecting to iunCoord
+                //update weight connecting to inCoord
                 std::vector<size_t> weightCoord = {(size_t)(layer)};
                 weightCoord.insert(weightCoord.end(),outCoord.begin(),outCoord.end());
                 weightCoord.insert(weightCoord.end(),inCoord.begin(),inCoord.end());
-                if(batchSize==1){
+                
+    
+                if(batchIdx==0){
                     weightsGrad_.getEntry(weightCoord)=0;
                 }
+//now correct, no!
                 weightsGrad_.getEntry(weightCoord)+=
-                    neuronGrad_[layer].getEntry(inCoord)
-                    *weights_.getEntry(weightCoord)
+                    neuronGrad_[layer+1].getEntry(inCoord)
+                    *activationFct_(neuronStates_[layer].getEntry(outCoord));
+                    //*weights_.getEntry(weightCoord)
                 ;
             }
         }
@@ -161,15 +164,16 @@ void neuralNetwork<N>::updateWeightsGrad_(size_t batchSize){
     
 //updates all biases, assume neuronGrad_ has been updated
 template<size_t N>
-void neuralNetwork<N>::updateBiasesGrad_(size_t batchSize){
+void neuralNetwork<N>::updateBiasesGrad_(size_t batchIdx){
     for(size_t layer=1; layer<neuronStates_.size(); layer++){
         for(const auto& c : coordinates_[layer]){
-            if(batchSize==1){
+            if(batchIdx==0){
                 biasesGrad_[layer].getEntry(c)=0;
             }
             biasesGrad_[layer].getEntry(c)+=neuronGrad_[layer].getEntry(c);
         }
     }
+  
     return;
 }
 
