@@ -39,7 +39,7 @@ inline void gradientDescentStep(
     const double learningRate
     ){
         if(weightsState.shape!=weightsGradient.shape){
-            throw(std::domain_error("gradientDescentShape: size of function and gradient do not match"));
+            throw(std::domain_error("gradientDescentStep: size of function and gradient do not match"));
         }
         for(size_t i=0; i<weightsState.size(); i++){
             weightsState[i]-=(learningRate*weightsGradient.at(i)); //corrected sign
@@ -49,7 +49,7 @@ inline void gradientDescentStep(
 }
 
 template<size_t N>
-void neuralNetwork<N>::netGradientDescentStep(double learningRate){
+void neuralNetwork<N>::netGradientDescentStep_(double learningRate){
     //weights
     gradientDescentStep( 
         weights_, 
