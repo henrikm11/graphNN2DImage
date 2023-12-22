@@ -103,7 +103,7 @@ public:
     //const TensorShape<N>& shape(void) const not necessary anymore
 
     T& getEntry(const std::vector<size_t>& coordinates, const size_t depth=0); //returns entry at coordinates[depth:]
-
+    const T& getEntry(const std::vector<size_t>& coordinates, const size_t depth=0) const;
 	
     const TensorShape<N> shape; //can be public because it is const 
 private:
@@ -125,6 +125,7 @@ public:
     Tensor<T,1>& operator=(const Tensor<T,1>& other);
 	~Tensor() = default;
     T& getEntry(const std::vector<size_t>& coordinates, const size_t depth=0);
+    const T& getEntry(const std::vector<size_t>& coordinates, const size_t depth=0) const;
 
     size_t size(void) const;
     T& operator[](const int i);
@@ -133,8 +134,8 @@ public:
 
     const TensorShape<1> shape; //just an int
 
+
 private:
-   
     std::vector<T> entries_;
 };
 
@@ -149,4 +150,5 @@ TensorShape<1> getShape(const Tensor<T,1>& tensor);
 
 
 #include "tensor_template.hpp"
+#include "tensorize.hpp"
 #endif /*TENSROR_TEMPLATE_H*/

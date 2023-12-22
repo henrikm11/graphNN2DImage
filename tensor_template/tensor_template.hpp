@@ -12,6 +12,7 @@ contains implementation of tensor template
 
 #include <vector>
 #include <stdexcept>
+#include <iostream>
 
 
 
@@ -259,6 +260,18 @@ T& Tensor<T,N>::getEntry(const std::vector<size_t>& coordinates, const size_t de
     return entries_[coordinates[depth]].getEntry(coordinates,depth+1);
 };
 
+template<typename T, size_t N>
+const T& Tensor<T,N>::getEntry(const std::vector<size_t>& coordinates, const size_t depth) const{
+    if(coordinates.size()-depth!=N){
+        throw(std::domain_error("Tensor<T,N>::getEntry: size of coordinates, depth, N do not mathc"));
+    }
+    if(coordinates[depth]>shape.size()){
+        throw(std::out_of_range("Tensor<T,N>::getEntry"));
+    }
+    return entries_[coordinates[depth]].getEntry(coordinates,depth+1);
+};
+
+
 
 /*
 //
@@ -347,6 +360,18 @@ T& Tensor<T,1>::getEntry(const std::vector<size_t>& coordinates, const size_t de
     return entries_[coordinates[depth]];
 };
 
+template<typename T>
+const T& Tensor<T,1>::getEntry(const std::vector<size_t>& coordinates, const size_t depth) const{
+    if(coordinates.size()-depth!=1){
+        throw(std::domain_error("Tensor<T,N>::getEntry: size of coordinates, depth, N do not mathc"));
+    }
+        if(coordinates[depth]>shape.size()){
+        throw(std::out_of_range("Tensor<T,N>::getEntry"));
+    }
+    return entries_[coordinates[depth]];
+};
+
+
 
 /*
 //
@@ -376,4 +401,24 @@ template<typename T>
 TensorShape<1> getShape(const Tensor<T,1>& tensor){
     TensorShape<1> shape(tensor.size());
     return shape;
+}
+
+
+//id on tensors
+template<typename T, size_t N>
+Tensor<T,N> tensorId(const Tensor<T,N>& in){
+    Tensor<T,N> out(in);
+    return out;
+}
+
+template<typename T, size_t N>
+Tensor<T,2*N> tensorIdGrad(const Tensor<T,N>& in){
+    Tensor<T,2*N> grad(concatShapes(in.shape,in.shape));
+    std::vector<std::vector<size_t>> coord = in.shape.generateCoordinates();
+    for(const auto& pos : coord){
+        std::vector<size_t> gradPos=pos;
+        gradPos.insert(gradPos.end(),pos.begin(),pos.end());
+        grad.getEntry(gradPos)=1;
+    }
+    return grad;
 }
