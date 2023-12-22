@@ -47,7 +47,7 @@ void neuralNetwork<N>::fit_(
                     sampleOut,
                     batchIdx
                 );
-                netGradientDescentStep(learningRate);
+                netGradientDescentStep_(learningRate);
                 batchIdx++;
             }
         }
