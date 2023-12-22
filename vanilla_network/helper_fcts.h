@@ -27,7 +27,9 @@
 #include <cmath>
 #include <vector>
 #include <exception>
+#include <iostream>
 #include "tensor_template/tensor_template.h"
+#include "tensor_template/tensorize.hpp"
 
 
 //struct containing a function and its gradient
@@ -55,57 +57,34 @@ struct fctGrad{
 
 //relu activation
 
-inline double relu(double x){
+inline double relu(const double x){
     return std::max(x,(double)0);
 }
-inline double reluGrad(double x){
-    return (double)(x>0);
+inline double reluGrad(const double x){
+    return (double)(x>=0);
 }
 
-//mean squared error for vectors
-double inline mse(const std::vector<double>& a, const std::vector<double>& b){
-    if(a.size()!=b.size()){
-        throw(std::domain_error("mse: vector sizes are different"));
-    }
+//sigmoid tang activation
 
-    double currErr=0;
-    double prevErr=0;
-    double count=1;
-
-    auto it_a = a.begin();
-    auto it_b = b.begin();
-
-    while(it_a!=a.end()){
-        double temp = currErr;
-        double currCont=(*it_a-*it_b)*(*it_a-*it_b); //square error of current term
-        currErr+=(currCont-prevErr)/count;
-        prevErr=temp;
-        count++;
-    }
-    return currErr;
+inline double sigmoidTanh(const double x){
+    return std::tanh(x);
 }
 
-//computes derivative of mse(a,b) in direction pos in first (a) component
-double inline mseGrad(const std::vector<double>& a, const std::vector<double>& b, size_t pos){
-    if(a.size()!=b.size()){
-        throw(std::domain_error("mse: vector sizes are different"));
-    }
-    if(a.size()==0){
-        return 0;
-    }
-    //if pos is bad we are throwing anyway
-    return 2*(a[pos]-b[pos])/a.size();
-
-
-
+inline double sigmoidTanhGrad(const double x){
+    return 1/(std::cosh(x)*std::cosh(x));
 }
+
+
+
+
+
 
 //mean squared error for tensors
 //computes mse of tensors with matching shape,
 //uses nummerically stable formula for mean \mu_n of numbers x_1,...,x_n:
 // \mu_n=\mu_{n-1}+(x_n-\mu_{n-1})
 template<size_t N>
-double mse(Tensor<double,N>& a, Tensor<double,N>& b){
+double mse(const Tensor<double,N>& a, const Tensor<double,N>& b){
     if(a.shape!=b.shape){
         throw(std::domain_error("mse: tensor shapes are different"));
     }
@@ -128,11 +107,10 @@ double mse(Tensor<double,N>& a, Tensor<double,N>& b){
 //this throws std::out_of_range if pos is no good
 //entryCount is total count of entries of tensors, no need to compute this at every pass
 template<size_t N>
-double mseGrad(Tensor<double,N>& a, Tensor<double,N>& b, const std::vector<size_t>& pos, size_t entryCount){
+double mseGrad(const Tensor<double,N>& a, const Tensor<double,N>& b, const std::vector<size_t>& pos, size_t entryCount){
     if(a.shape!=b.shape){
         throw(std::domain_error("mseGrad: tensor shapes are different"));
     }
-
     double grad = 2*(a.getEntry(pos)-b.getEntry(pos))/entryCount;
     return grad;
 }
@@ -140,25 +118,100 @@ double mseGrad(Tensor<double,N>& a, Tensor<double,N>& b, const std::vector<size_
 
 
 //crossEntropy
-/// @brief computes cross entropy of distribution probabilities and indicator at correct label 
-/// @param probabilities predicted probabilities
-/// @param correctLabel correct label, labels are in range 0,1,...
-/// @return cross entropy 
-inline double crossEntropy(std::vector<double> probabilities, int correctLabel){
-    return -std::log(probabilities[correctLabel]);
+
+
+//this can be tensorized
+//p is from reference distribution
+inline double crossEntropy(double p, double q){
+    if(q==0){
+        if(p==0) return 0;
+        return -HUGE_VAL;
+    }
+    return -p*std::log(q);
 }
 
-inline std::vector<double> crossEntropyGradient(std::vector<double> probabilities, int correctLabel){
-    std::vector<double> grad(probabilities.size(),0);
-    grad[correctLabel]=-1/probabilities[correctLabel];
+//derivative in q!
+inline double crossEntropyGrad(double p, double q){
+    if(q==0){
+        if(p==0) return 0;
+        return -HUGE_VAL;
+    }
+    return -p/q;
+}
+
+
+//b is reference distribution(!!!) to be consistent with mse
+template<size_t N>
+double crossEntropy(const Tensor<double,N>& a, const Tensor<double,N>&b){
+    return aggregateOnTensor(b,a, crossEntropy);
+}
+
+//derivative in pos coordinate of a
+template<size_t N>
+double crossEntropyGrad(const Tensor<double,N>& a, const Tensor<double,N>&b,const std::vector<size_t>& pos, size_t norm){
+    return crossEntropyGrad(b.getEntry(pos),a.getEntry(pos));
+}
+
+
+
+inline double softArgMaxEntry(double input, double beta=10){
+    return std::exp(beta*input);
+}
+
+
+//softArgMax with regularization parameter beta
+template<size_t M>
+Tensor<double,M> softArgMax(const Tensor<double,M>& input, double beta){
+    Tensor<double,M> res(input.shape);
+    std::vector<std::vector<size_t>> coord = input.shape.generateCoordinates();
+    double norm=0;
+    for(const auto& pos : coord){
+        norm+=std::exp(beta*input.getEntry(pos));
+    }
+    for(const auto& pos : coord){
+        res.getEntry(pos)=std::exp(beta*input.getEntry(pos))/norm;
+    } 
+    return res;
+}
+
+//beta=1
+template<size_t M>
+Tensor<double,M> softArgMax(const Tensor<double,M>& input){
+    return softArgMax(input, 1);
+}
+
+
+//gradient of softArgMax with regularization parameter beta
+template<size_t M>
+Tensor<double,2*M> softArgMaxGrad(const Tensor<double,M>& input, double beta){
+    Tensor<double,2*M> grad(concatShapes(input.shape, input.shape));
+        //res[i][j]=\partial softMax_i / \partial x_j
+    Tensor<double,M> f = softArgMax(input, beta);
+    std::vector<std::vector<size_t>> coord = input.shape.generateCoordinates();
+    for(const auto& pos0 : coord){
+        for(const auto& pos1 : coord){
+            std::vector<size_t> gradPos=pos0;
+            gradPos.insert(gradPos.end(), pos1.begin(),pos1.end());
+            grad.getEntry(gradPos);
+            grad.getEntry(gradPos)=beta*f.getEntry(pos0)*((pos0==pos1) - f.getEntry(pos1));
+     
+        }
+    }
+   
     return grad;
 }
 
+//beta=1
+template<size_t M>
+Tensor<double,2*M> softArgMaxGrad(const Tensor<double,M>& input){
+    return softArgMaxGrad(input, 1);
+}
 
 
 
 //some smooth approximations of argmax, max, its gradient
 
+/*
 /// @brief smmoth approximation of argmax
 /// @param input vector to take soft argmax of
 /// @param beta regularization parameter, get argmax approached for beta \to \infty
@@ -201,6 +254,7 @@ inline std::vector<double> softArgMaxGradComponent(const std:: vector<double>& i
     return res;
 }
 
+
 /// @brief smooth approximation of max
 /// @param input vector to take max of  
 /// @param alpha regularization parameter, get max for \alpha \to \infty
@@ -241,5 +295,7 @@ inline std::vector<double> BoltzmannOperatorGrad(const std::vector<double>& inpu
 
     return gradient;
 }
+
+*/
 
 #endif //HELPER_FCTS_H
