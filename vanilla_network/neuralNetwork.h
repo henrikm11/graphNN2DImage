@@ -5,6 +5,7 @@
 /*
 TO DO
 -) neuralNetwork is all public right now for testing/debugging
+-) throw if network consits only of input layer
 -) add gradient of costFct_
 -) note to self: keep costFct_ on tensor level: mse can be implemented on entry leve, cross log entropy for instance cant
 */
@@ -39,15 +40,24 @@ class neuralNetwork{
 public:
     neuralNetwork(
         const TensorShape<N>& shape,
-        double (*const activationFunction)(double),
-        double (*const activationFunctionGrad)(double),
-        double (*const errorFct)(Tensor<double,N-1>&, Tensor<double,N-1>&),
-        double (*const errorFctGrad_)(Tensor<double,N-1>&, Tensor<double,N-1>&, const std::vector<size_t>&, size_t),
-        double learningRate=0.1
+        double (*const activationFunction)(const double),
+        double (*const activationFunctionGrad)(const double),
+        Tensor<double,N-1> (*const outputLayerTransform_)(const Tensor<double,N-1>&),
+        Tensor<double,2*N-2>(*const outputLayerTransformGrad_)(const Tensor<double,N-1>&),
+        double (*const errorFct)(const Tensor<double,N-1>&, const Tensor<double,N-1>&),
+        double (*const errorFctGrad_)(const Tensor<double,N-1>&, const Tensor<double,N-1>&, const std::vector<size_t>&, size_t)
+        );
+
+    neuralNetwork(
+        const TensorShape<N>& shape,
+        double (*const activationFunction)(const double),
+        double (*const activationFunctionGrad)(const double),
+        double (*const errorFct)(const Tensor<double,N-1>&, const Tensor<double,N-1>&),
+        double (*const errorFctGrad_)(const Tensor<double,N-1>&, const Tensor<double,N-1>&, const std::vector<size_t>&, size_t)
         );
 
     //Tensor<double, N-1> predict(const Tensor<double,N-1>& input); 
-    void setLearningRate(const double rate);
+    //void setLearningRate(const double rate);
     /*
     void fit(
         const std::vector<Tensor<double,N-1>>& sampleInputs,
@@ -56,23 +66,43 @@ public:
     */
 	
     Tensor<double,N-1> predict(const Tensor<double,N-1>& input, bool updateNeuronStates=true);
+    
+    void fit(
+        const std::vector<Tensor<double,N-1>>& trainingIns, 
+        const std::vector<Tensor<double,N-1>>& trainingOuts,
+        double learningRate=0.1,
+        size_t maxEpochs=100,
+        size_t batchSize=64    
+    );
 	
     //make those private again after testing
 //private only gone for the moment for testing/debugging purposes
 //private:
+
+    //variables related to basic architecture of the network
 	const size_t neuronCount_;
+    const size_t outputLayerCount_;
     const TensorShape<N> networkShape_; //somewhat redundant as it is stored in neuronStates?
-    double (*const activationFct_)(double);
-    double (*const activationFctGrad_)(double);
-    double (*const costFct_)(Tensor<double,N-1>&, Tensor<double,N-1>&);
-    double (*const costFctGrad_)(Tensor<double,N-1>&, Tensor<double,N-1>&, const std::vector<size_t>&, size_t);
+    double (*const activationFct_)(const double);
+    double (*const activationFctGrad_)(const double);
+    Tensor<double,N-1> (*const outputLayerTransform_)(const Tensor<double,N-1>&);
+    Tensor<double,2*N-2>(*const outputLayerTransformGrad_)(const Tensor<double,N-1>&);
+    //Tensor<double,N-1> (*const outputLayerTransformGrad_)(const Tensor<double,N-1>&, const std::vector<size_t>&);
+    double (*const costFct_)(const Tensor<double,N-1>&, const Tensor<double,N-1>&);
+    double (*const costFctGrad_)(const Tensor<double,N-1>&, const Tensor<double,N-1>&, const std::vector<size_t>&, size_t); //last entry is for normalization
     Tensor<double,2*N-1> weights_;
     Tensor<double,N> biases_;
     Tensor<double,2*N-1> weightsGrad_; 
     Tensor<double,N> biasesGrad_;
     Tensor<double,N> neuronStates_;
     Tensor<double,N> neuronGrad_;
-    double learningRate_;
+    
+
+ 
+
+    //training data
+    std::vector<Tensor<double,N-1>> trainingIns_;
+    std::vector<Tensor<double,N-1>> trainingOuts_;
     
     //double activationFunction_(const double input){return std::max((double)0,input);};
     //double activationFunctionGrad_(const double input);
@@ -81,12 +111,23 @@ public:
 	
     void updateNeuronStates_(const Tensor<double,N-1>& input);
     void updateLayer_(const size_t i);
-	void updateGradient_(const Tensor<double, N-1>& sampleIn, const Tensor<double,N-1>& sampleOut, size_t batchSize=1);
+    void updateOutputLayer_(void);
+	void updateGradient_(const Tensor<double, N-1>& sampleIn, const Tensor<double,N-1>& sampleOut, size_t batchIdx=0);
 	void updateOutputLayerGrad_(const Tensor<double, N-1>& sampleIn, const Tensor<double,N-1>& sampleOut);
 	void backpropagation_(void);
-    void updateWeightsGrad_(size_t batchSize=1);
-    void updateBiasesGrad_(size_t batchSize=1);
-    void gradientDescentStep(void);
+    void updateWeightsGrad_(size_t batchIdx=0);
+    void updateBiasesGrad_(size_t batchIdx=0);
+    void netGradientDescentStep_(double learningRate);
+
+
+    void weightInitilization_(void);
+    void biasInitilization_(void);
+
+    void fit_(
+        double learningRate=0.01,
+        size_t maxEpochs=100,
+        size_t batchSize=64   
+    );
 };
 
 
@@ -106,6 +147,7 @@ TensorShape<2*N-1> getWeightsShape(const TensorShape<N>& networkShape);
 #include "gradientDescent.hpp"
 #include "backpropagation.hpp"
 #include "fit.hpp"
+#include "weight_initilization.hpp"
 
 #endif /* NEURAL_NETWORK_H */
 
